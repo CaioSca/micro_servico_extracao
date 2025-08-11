@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=airflow
+    ports:
+      - "5432:5432"
+    networks:
+      - airflow-network
+
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - airflow-network
+
+  airflow-migrate:
+    build: .
+    image: airflow_all_in_one
+    container_name: airflow-migrate
+    env_file: .env-staging
+    environment:
+      - COMPONENT=migrate
+    depends_on:
+      - postgres
+      - redis
+    restart: 'no'
+    networks:
+      - airflow-network
+
+  airflow-webserver:
+    image: airflow_all_in_one
+    container_name: airflow-webserver
+    env_file: .env-staging
+    environment:
+      - COMPONENT=webserver
+    ports:
+      - "8080:8080"
+    depends_on:
+      - airflow-migrate
+    networks:
+      - airflow-network
+    command: >
+      bash -c "
+      airflow users create --username admin --firstname admin --lastname admin --role Admin --email admin@email.com --password admin
+      "
+
+  airflow-scheduler:
+    image: airflow_all_in_one
+    container_name: airflow-scheduler
+    env_file: .env-staging
+    environment:
+      - COMPONENT=scheduler
+    depends_on:
+      - airflow-migrate
+    networks:
+      - airflow-network
+
+  airflow-worker:
+    image: airflow_all_in_one
+    container_name: airflow-worker
+    env_file: .env-staging
+    environment:
+      - COMPONENT=worker
+    depends_on:
+      - airflow-migrate
+    networks:
+      - airflow-network
+
+  airflow-flower:
+    image: airflow_all_in_one
+    container_name: airflow-flower
+    env_file: .env-staging
+    environment:
+      - COMPONENT=flower
+    ports:
+      - "5555:5555"
+    depends_on:
+      - airflow-migrate
+    networks:
+      - airflow-network
+
+networks:
+  airflow-network:
+    driver: bridge
