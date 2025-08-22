@@ -4,7 +4,7 @@ phases:
   pre_build:
     commands:
       - docker login --username $DOCKERHUB_USERNAME --password $DOCKERHUB_PASSWORD
-      - aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $REPO_URI
+      - aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $ECR_REGISTRY
       - export IMAGE_TAG=`printf %.7s $CODEBUILD_RESOLVED_SOURCE_VERSION`
       - REPOSITORY_URI=$REPO_URI
   build:
