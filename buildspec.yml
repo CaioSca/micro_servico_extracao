@@ -1,0 +1,25 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - docker login --username $DOCKERHUB_USERNAME --password $DOCKERHUB_PASSWORD
+      - aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $REPO_URI
+      - export IMAGE_TAG=`printf %.7s $CODEBUILD_RESOLVED_SOURCE_VERSION`
+      - REPOSITORY_URI=$REPO_URI
+  build:
+    commands:
+      - docker build --no-cache --tag=airflow:latest -f ./airflow/Dockerfile ./airflow
+      - docker tag airflow:latest $REPOSITORY_URI:latest
+      - docker tag airflow:latest $REPOSITORY_URI:$IMAGE_TAG
+  post_build:
+    commands:
+      - echo Pushing the Docker images...
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - printf '[{"name":"Airflow","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+
+
+artifacts:
+  files:
+    - imagedefinitions.json
